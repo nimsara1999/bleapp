@@ -40,7 +40,7 @@ async function requestLocationPermission() {
 requestLocationPermission();
 
 const SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
-const STEP_DATA_CHAR_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a8";
+const STEP_DATA_CHAR_UUID = "beefcafe-36e1-4688-b7f5-00000000000b";
 
 export default function App() {
   const [deviceID, setDeviceID] = useState(null);
@@ -59,7 +59,7 @@ export default function App() {
         setConnectionStatus("Error searching for devices");
         return;
       }
-      if (device.name === "ESP32BLE") {
+      if (device.name === "Step-Sense") {
         bleManager.stopDeviceScan();
         setConnectionStatus("Connecting...");
         connectToDevice(device);
@@ -134,7 +134,7 @@ export default function App() {
 
   return (
     <View style={styles.container}>
-    <Text style={styles.title}>Step Counter</Text>
+    <Text>Test</Text>
     <Text>{connectionStatus}</Text>
     <StatusBar style="auto" />
     </View>
