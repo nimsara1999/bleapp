@@ -1,14 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, StyleSheet, Text, TextInput, TouchableOpacity, View, ActivityIndicator, Image, Alert } from 'react-native';
+import { KeyboardAvoidingView, StyleSheet, Text, TextInput, TouchableOpacity, View, Alert, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/core';
 import { auth } from '../firebase';
-import { signInWithEmailAndPassword, onAuthStateChanged } from "firebase/auth";
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged } from "firebase/auth";
 
-const LoginScreen = () => {
+const SignupScreen = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [inputsFilled, setInputsFilled] = useState(false); // State to track if inputs are filled
+  const [reenteredPassword, setReenteredPassword] = useState('');
+  const [registered, setRegistered] = useState(false);
   const navigation = useNavigation();
 
   useEffect(() => {
@@ -17,65 +17,78 @@ const LoginScreen = () => {
         navigation.replace("Home");
       }
     });
+
     return unsubscribe;
   }, []);
 
-  // Function to handle login button press
-  const handleLogin = async () => {
-    if (email.trim() === '' || password.trim() === '') { // Check if inputs are filled
+  const handleSignUp = () => {
+    if (!email || !password || !reenteredPassword) {
       Alert.alert('Missing Information', 'Please fill in all required fields.');
       return;
     }
-    setLoading(true);
-    try {
-      const userCredentials = await signInWithEmailAndPassword(auth, email, password);
-      console.log('Logged in with:', userCredentials.user.email);
-    } catch (error) {
-      alert(error.message);
-    } finally {
-      setLoading(false);
+
+    if (password !== reenteredPassword) {
+      Alert.alert('Password Not Matched', 'Please make sure the passwords match.');
+      return;
     }
+
+    createUserWithEmailAndPassword(auth, email, password)
+      .then(userCredentials => {
+        const user = userCredentials.user;
+        console.log('Registered with:', user.email);
+        setRegistered(true);
+      })
+      .catch(error => {
+        setRegistered(false);
+        alert(error.message);
+      });
   };
 
-  const handleSignUp = () => {
-    navigation.navigate("Signup");
+  const handleLogin = () => {
+    navigation.navigate("Login");
   };
 
   return (
-    <KeyboardAvoidingView style={[styles.container, styles.background]} behavior="padding">
-      <TouchableOpacity onPress={handleSignUp} style={styles.loginButton}>
-        <Text style={[styles.signupText, { color: 'white' }]}>Register ?</Text>
+    <KeyboardAvoidingView style={[styles.container, styles.background]}>
+      <TouchableOpacity onPress={handleLogin} style={styles.loginButton}>
+        <Text style={[styles.signupText, { color: 'white' }]}>Login ?</Text>
       </TouchableOpacity>
       <Image source={require('../assets/logo1.png')} style={styles.logo} />
       <View style={[styles.inputContainer, styles.box]}>
         <TextInput
-          placeholder="Email *"
+          placeholder="Email*"
           value={email}
           onChangeText={setEmail}
           style={styles.input}
         />
         <TextInput
-          placeholder="Password *"
+          placeholder="Password*"
           value={password}
           onChangeText={setPassword}
           style={styles.input}
           secureTextEntry
         />
-        <TouchableOpacity onPress={handleLogin} style={[styles.button]}>
-          <Text style={styles.buttonOutlineText}>Login</Text>
+        <TextInput
+          placeholder="Re-enter Password*"
+          value={reenteredPassword}
+          onChangeText={setReenteredPassword}
+          style={styles.input}
+          secureTextEntry
+        />
+        <TouchableOpacity onPress={handleSignUp} style={[styles.button, styles.buttonOutline]}>
+          <Text style={styles.buttonOutlineText}>Register</Text>
         </TouchableOpacity>
       </View>
-      {loading && (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#745e96" />
-          <Text style={styles.loadingText}>Logging in...</Text>
+      {registered && (
+        <View style={styles.successContainer}>
+          <Text style={styles.successText}>Successfully registered</Text>
         </View>
       )}
     </KeyboardAvoidingView>
   );
 };
 
-export default LoginScreen;
+export default SignupScreen;
 
 const styles = StyleSheet.create({
   container: {
@@ -109,10 +122,16 @@ const styles = StyleSheet.create({
     marginTop: 5,
     opacity: 0.9,
   },
-  button: {
-    backgroundColor: '#902bf5',
+  buttonContainer: {
     width: '50%',
-    padding: 11,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 40,
+  },
+  button: {
+    backgroundColor: '#0782F9',
+    width: '60%',
+    padding: 10,
     borderRadius: 10,
     alignItems: 'center',
     marginTop: 20,
@@ -123,25 +142,31 @@ const styles = StyleSheet.create({
     borderWidth: 2,
   },
   buttonOutlineText: {
-    color: 'white',
+    color: '#902bf5',
     fontWeight: '700',
     fontSize: 16,
   },
-  loadingContainer: {
+  successContainer: {
     position: 'absolute',
-    top: 0,
-    bottom: 0,
+    top: 50,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-    justifyContent: 'center',
     alignItems: 'center',
   },
-  loadingText: {
-    marginTop: 10,
+  successText: {
     fontSize: 18,
     fontWeight: 'bold',
+    color: 'green',
+  },
+  signupButton: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
+  },
+  signupText: {
     color: '#902bf5',
+    fontWeight: '700',
+    fontSize: 14,
   },
   loginButton: {
     shadowRadius: 2,
@@ -151,7 +176,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,    // More opaque shadow
     shadowRadius: 6,       // Smoother shadow border
     elevation: 10,         // Higher elevation for Android
-    width: '22%',
+    shadowColor: '#000',
+    shadowOpacity: 0.5,
+    width: '18%',
     padding: 5,
     borderRadius: 8,
     alignItems: 'center',
@@ -160,10 +187,6 @@ const styles = StyleSheet.create({
     top: 20,
     right: 20,
     zIndex: 1, // Ensure button appears above other elements
-  },
-  signupText: {
-    fontWeight: '700',
-    fontSize: 14,
   },
   logo: {
     height: 100,
