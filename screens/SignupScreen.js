@@ -1,24 +1,49 @@
 import React, { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, StyleSheet, Text, TextInput, TouchableOpacity, View, Alert, Image } from 'react-native';
+import { Animated, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View, Alert, Image, ActivityIndicator, Keyboard} from 'react-native';
 import { useNavigation } from '@react-navigation/core';
+import { createUserWithEmailAndPassword } from "firebase/auth";
 import { auth } from '../firebase';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged } from "firebase/auth";
+
+const themeColor = '#7836b3';
 
 const SignupScreen = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [reenteredPassword, setReenteredPassword] = useState('');
   const [registered, setRegistered] = useState(false);
+  const [loading, setLoading] = useState(false); // State variable for loading animation
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const [logoPosition] = useState(new Animated.Value(0));
   const navigation = useNavigation();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, user => {
-      if (user) {
-        navigation.replace("Home");
+    const keyboardDidShowListener = Keyboard.addListener(
+      Platform.OS === 'android' ? 'keyboardDidShow' : 'keyboardWillShow',
+      () => {
+        setKeyboardVisible(true);
+        Animated.timing(logoPosition, {
+          toValue: -100,
+          duration: 250,
+          useNativeDriver: false,
+        }).start();
       }
-    });
+    );
+    const keyboardDidHideListener = Keyboard.addListener(
+      Platform.OS === 'android' ? 'keyboardDidHide' : 'keyboardWillHide',
+      () => {
+        setKeyboardVisible(false);
+        Animated.timing(logoPosition, {
+          toValue: 0,
+          duration: 250,
+          useNativeDriver: false,
+        }).start();
+      }
+    );
 
-    return unsubscribe;
+    return () => {
+      keyboardDidShowListener.remove();
+      keyboardDidHideListener.remove();
+    };
   }, []);
 
   const handleSignUp = () => {
@@ -32,14 +57,18 @@ const SignupScreen = () => {
       return;
     }
 
+    setLoading(true); // Set loading state to true when registration begins
+
     createUserWithEmailAndPassword(auth, email, password)
       .then(userCredentials => {
         const user = userCredentials.user;
         console.log('Registered with:', user.email);
         setRegistered(true);
+        setLoading(false); // Set loading state to false when registration is successful
+        navigation.navigate('Login');
       })
       .catch(error => {
-        setRegistered(false);
+        setLoading(false); // Set loading state to false if registration fails
         alert(error.message);
       });
   };
@@ -49,36 +78,44 @@ const SignupScreen = () => {
   };
 
   return (
-    <KeyboardAvoidingView style={[styles.container, styles.background]}>
-      <TouchableOpacity onPress={handleLogin} style={styles.loginButton}>
-        <Text style={[styles.signupText, { color: 'white' }]}>Login ?</Text>
+    <KeyboardAvoidingView style={[styles.container, styles.background]} behavior="padding">
+      {!keyboardVisible && (
+        <Animated.View style={[styles.boxContainer, styles.box, { transform: [{ translateY: logoPosition }] }]}>
+          <Image source={require('../assets/logo1.png')} style={styles.logo} />
+        </Animated.View>
+      )}
+      <Text style={[styles.label, { marginTop: 95 }]}>Email</Text>
+      <TextInput
+        placeholder="Email*"
+        value={email}
+        onChangeText={setEmail}
+        style={[styles.input, { borderColor: themeColor }]}
+      />
+      <Text style={styles.label}>Password</Text>
+      <TextInput
+        placeholder="Password*"
+        value={password}
+        onChangeText={setPassword}
+        style={[styles.input, { borderColor: themeColor }]}
+        secureTextEntry
+      />
+      <TextInput
+        placeholder="Re-enter Password*"
+        value={reenteredPassword}
+        onChangeText={setReenteredPassword}
+        style={[styles.input, { borderColor: themeColor, marginTop: -10 }]}
+        secureTextEntry
+      />
+      <TouchableOpacity onPress={handleSignUp} style={[styles.button, { backgroundColor: themeColor }]}>
+        {loading ? (
+          <ActivityIndicator size="small" color="white" /> // Display loading animation if loading is true
+        ) : (
+          <Text style={styles.buttonText}>Register</Text>
+        )}
       </TouchableOpacity>
-      <Image source={require('../assets/logo1.png')} style={styles.logo} />
-      <View style={[styles.inputContainer, styles.box]}>
-        <TextInput
-          placeholder="Email*"
-          value={email}
-          onChangeText={setEmail}
-          style={styles.input}
-        />
-        <TextInput
-          placeholder="Password*"
-          value={password}
-          onChangeText={setPassword}
-          style={styles.input}
-          secureTextEntry
-        />
-        <TextInput
-          placeholder="Re-enter Password*"
-          value={reenteredPassword}
-          onChangeText={setReenteredPassword}
-          style={styles.input}
-          secureTextEntry
-        />
-        <TouchableOpacity onPress={handleSignUp} style={[styles.button, styles.buttonOutline]}>
-          <Text style={styles.buttonOutlineText}>Register</Text>
-        </TouchableOpacity>
-      </View>
+      <TouchableOpacity onPress={handleLogin} >
+        <Text style={[styles.signupText, { color: themeColor }]}>Login ?</Text>
+      </TouchableOpacity>
       {registered && (
         <View style={styles.successContainer}>
           <Text style={styles.successText}>Successfully registered</Text>
@@ -97,52 +134,59 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   background: {
-    backgroundColor: '#b9a5e2', // Lavender color
+    backgroundColor: 'rgba(249, 242, 255)', // Lavender color
   },
-  inputContainer: {
-    width: '80%',
-    padding: 20,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.7)', // Transparent white background
+  boxContainer: {
+    position: 'absolute',
+    top: 0,
+    alignItems: 'center',
+    width: '100%',
   },
   box: {
-    shadowRadius: 2,
-    opacity: 0.9, // For Android shadow
-    shadowColor: '#000',    // Black color for shadow
-    shadowOffset: { width: 0, height: 4 }, // More vertical offset
-    shadowOpacity: 0.3,    // More opaque shadow
-    shadowRadius: 6,       // Smoother shadow border
-    elevation: 3,         // Higher elevation for Android
+    backgroundColor: themeColor,
+    padding: 25,
+    borderBottomEndRadius: 15,
+    borderBottomLeftRadius: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 10,
+    paddingBottom: 2,
   },
   input: {
+    shadowColor: '#000',
+    width: '80%',
     backgroundColor: 'white',
     paddingHorizontal: 15,
     paddingVertical: 10,
     borderRadius: 10,
-    marginTop: 5,
-    opacity: 0.9,
+    marginBottom: 20,
+    opacity: 1,
+    borderColor: themeColor,
+    borderWidth: 1,
   },
-  buttonContainer: {
-    width: '50%',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 40,
+  label: {
+    alignSelf: 'flex-start',
+    marginLeft: '10%',
+    marginBottom: 5,
+    fontSize: 16,
+    fontWeight: '600',
+    color: themeColor,
   },
   button: {
-    backgroundColor: '#0782F9',
-    width: '60%',
-    padding: 10,
+    elevation: 1,
+    shadowColor: themeColor,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    width: '80%',
+    padding: 11,
     borderRadius: 10,
     alignItems: 'center',
-    marginTop: 20,
   },
-  buttonOutline: {
-    backgroundColor: 'white',
-    borderColor: '#902bf5',
-    borderWidth: 2,
-  },
-  buttonOutlineText: {
-    color: '#902bf5',
+  buttonText: {
+    color: 'white',
     fontWeight: '700',
     fontSize: 16,
   },
@@ -158,39 +202,29 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: 'green',
   },
-  signupButton: {
-    position: 'absolute',
-    top: 20,
-    right: 20,
-  },
-  signupText: {
-    color: '#902bf5',
-    fontWeight: '700',
-    fontSize: 14,
-  },
   loginButton: {
-    shadowRadius: 2,
-    opacity: 0.9, // For Android shadow
-    shadowColor: '#000',    // Black color for shadow
-    shadowOffset: { width: 0, height: 4 }, // More vertical offset
-    shadowOpacity: 0.3,    // More opaque shadow
-    shadowRadius: 6,       // Smoother shadow border
-    elevation: 10,         // Higher elevation for Android
-    shadowColor: '#000',
-    shadowOpacity: 0.5,
-    width: '18%',
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    zIndex: 1,
     padding: 5,
     borderRadius: 8,
     alignItems: 'center',
-    backgroundColor: '#902bf5',
-    position: 'absolute',
-    top: 20,
-    right: 20,
-    zIndex: 1, // Ensure button appears above other elements
+    backgroundColor: themeColor,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 10,
   },
   logo: {
     height: 100,
     width: 100,
     marginBottom: 20,
+  },
+  signupText: {
+    marginTop: 18,
+    fontWeight: '700',
+    fontSize: 16,
   },
 });

@@ -1,28 +1,60 @@
 import React, { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, StyleSheet, Text, TextInput, TouchableOpacity, View, ActivityIndicator, Image, Alert } from 'react-native';
+import { Animated, Keyboard, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View, ActivityIndicator, Image, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/core';
 import { auth } from '../firebase';
 import { signInWithEmailAndPassword, onAuthStateChanged } from "firebase/auth";
+
+// Theme color variable
+const themeColor = '#7836b3';
 
 const LoginScreen = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [inputsFilled, setInputsFilled] = useState(false); // State to track if inputs are filled
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const [logoPosition] = useState(new Animated.Value(0));
   const navigation = useNavigation();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, user => {
       if (user) {
-        navigation.replace("Home");
+        setLoading(true); // Set loading to true when auto-logging in
+        navigation.navigate('Home');
       }
     });
-    return unsubscribe;
+
+    const keyboardDidShowListener = Keyboard.addListener(
+      Platform.OS === 'android' ? 'keyboardDidShow' : 'keyboardWillShow',
+      () => {
+        setKeyboardVisible(true);
+        Animated.timing(logoPosition, {
+          toValue: -100,
+          duration: 250,
+          useNativeDriver: false,
+        }).start();
+      }
+    );
+    const keyboardDidHideListener = Keyboard.addListener(
+      Platform.OS === 'android' ? 'keyboardDidHide' : 'keyboardWillHide',
+      () => {
+        setKeyboardVisible(false);
+        Animated.timing(logoPosition, {
+          toValue: 0,
+          duration: 250,
+          useNativeDriver: false,
+        }).start();
+      }
+    );
+
+    return () => {
+      unsubscribe();
+      keyboardDidShowListener.remove();
+      keyboardDidHideListener.remove();
+    };
   }, []);
 
-  // Function to handle login button press
   const handleLogin = async () => {
-    if (email.trim() === '' || password.trim() === '') { // Check if inputs are filled
+    if (email.trim() === '' || password.trim() === '') {
       Alert.alert('Missing Information', 'Please fill in all required fields.');
       return;
     }
@@ -43,31 +75,35 @@ const LoginScreen = () => {
 
   return (
     <KeyboardAvoidingView style={[styles.container, styles.background]} behavior="padding">
-      <TouchableOpacity onPress={handleSignUp} style={styles.loginButton}>
-        <Text style={[styles.signupText, { color: 'white' }]}>Register ?</Text>
+      {!keyboardVisible && (
+        <Animated.View style={[styles.boxContainer, styles.box, { transform: [{ translateY: logoPosition }] }]}>
+          <Image source={require('../assets/logo1.png')} style={styles.logo} />
+        </Animated.View>
+      )}
+      <Text style={styles.label}>Email</Text>
+      <TextInput
+        placeholder="Email *"
+        value={email}
+        onChangeText={setEmail}
+        style={[styles.input, styles.textInput]}
+      />
+      <Text style={styles.label}>Password</Text>
+      <TextInput
+        placeholder="Password *"
+        value={password}
+        onChangeText={setPassword}
+        style={[styles.input, styles.textInput]}
+        secureTextEntry
+      />
+      <TouchableOpacity onPress={handleLogin} style={styles.button}>
+        <Text style={styles.buttonOutlineText}>Login</Text>
       </TouchableOpacity>
-      <Image source={require('../assets/logo1.png')} style={styles.logo} />
-      <View style={[styles.inputContainer, styles.box]}>
-        <TextInput
-          placeholder="Email *"
-          value={email}
-          onChangeText={setEmail}
-          style={styles.input}
-        />
-        <TextInput
-          placeholder="Password *"
-          value={password}
-          onChangeText={setPassword}
-          style={styles.input}
-          secureTextEntry
-        />
-        <TouchableOpacity onPress={handleLogin} style={[styles.button]}>
-          <Text style={styles.buttonOutlineText}>Login</Text>
-        </TouchableOpacity>
-      </View>
+      <TouchableOpacity onPress={handleSignUp} style={[styles.signupButton]}>
+        <Text style={[styles.signupText, { color: themeColor }]}>            Register ?</Text>
+      </TouchableOpacity>
       {loading && (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#745e96" />
+          <ActivityIndicator size="large" color={themeColor} />
           <Text style={styles.loadingText}>Logging in...</Text>
         </View>
       )}
@@ -84,43 +120,52 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   background: {
-    backgroundColor: '#b9a5e2', // Lavender color
+    backgroundColor: 'rgba(249, 242, 255)', // Lavender color
   },
-  inputContainer: {
-    width: '80%',
-    padding: 20,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.7)', // Transparent white background
+  boxContainer: {
+    position: 'absolute',
+    top: 0,
+    alignItems: 'center',
+    width: '100%',
   },
   box: {
-    shadowRadius: 2,
-    opacity: 0.9, // For Android shadow
-    shadowColor: '#000',    // Black color for shadow
-    shadowOffset: { width: 0, height: 4 }, // More vertical offset
-    shadowOpacity: 0.3,    // More opaque shadow
-    shadowRadius: 6,       // Smoother shadow border
-    elevation: 3,         // Higher elevation for Android
+    backgroundColor: themeColor,
+    padding: 25,
+    borderBottomEndRadius: 15,
+    borderBottomLeftRadius: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 10,
+    paddingBottom: 2,
   },
   input: {
+    shadowColor: '#000',
+    width: '80%',
     backgroundColor: 'white',
     paddingHorizontal: 15,
     paddingVertical: 10,
     borderRadius: 10,
-    marginTop: 5,
-    opacity: 0.9,
+    marginBottom: 20,
+    opacity: 1,
+    borderColor: themeColor,
+    borderWidth: 1,
+  },
+  textInput: {
+    alignSelf: 'center',
   },
   button: {
-    backgroundColor: '#902bf5',
-    width: '50%',
+    elevation: 1,
+    shadowColor: themeColor,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    backgroundColor: themeColor,
+    width: '80%',
     padding: 11,
     borderRadius: 10,
     alignItems: 'center',
-    marginTop: 20,
-  },
-  buttonOutline: {
-    backgroundColor: 'white',
-    borderColor: '#902bf5',
-    borderWidth: 2,
   },
   buttonOutlineText: {
     color: 'white',
@@ -139,35 +184,46 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 10,
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
-    color: '#902bf5',
+    color: themeColor,
   },
   loginButton: {
-    shadowRadius: 2,
-    opacity: 0.9, // For Android shadow
-    shadowColor: '#000',    // Black color for shadow
-    shadowOffset: { width: 0, height: 4 }, // More vertical offset
-    shadowOpacity: 0.3,    // More opaque shadow
-    shadowRadius: 6,       // Smoother shadow border
-    elevation: 10,         // Higher elevation for Android
-    width: '22%',
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    zIndex: 1,
     padding: 5,
     borderRadius: 8,
     alignItems: 'center',
-    backgroundColor: '#902bf5',
-    position: 'absolute',
+    backgroundColor: themeColor,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 10,
+  },
+  signupButton: {
+    bottom: 'auto',
+    left: 'auto',
     top: 20,
     right: 20,
-    zIndex: 1, // Ensure button appears above other elements
   },
   signupText: {
     fontWeight: '700',
-    fontSize: 14,
+    fontSize: 16,
   },
   logo: {
     height: 100,
     width: 100,
     marginBottom: 20,
+  },
+  label: {
+    alignSelf: 'flex-start',
+    marginLeft: '10%',
+    marginBottom: 5,
+    fontSize: 16,
+    fontWeight: '600',
+    color: themeColor,
   },
 });
