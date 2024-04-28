@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Animated, Keyboard, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View, ActivityIndicator, Image, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/core';
 import { auth } from '../firebase';
-import { signInWithEmailAndPassword, onAuthStateChanged } from "firebase/auth";
+import { signInWithEmailAndPassword, sendPasswordResetEmail, onAuthStateChanged } from "firebase/auth";
 
 // Theme color variable
 const themeColor = '#7836b3';
@@ -69,6 +69,19 @@ const LoginScreen = () => {
     }
   };
 
+  const handleForgotPassword = async () => {
+    if (email.trim() === '') {
+      Alert.alert('Email Required', 'Please enter your email to reset password.');
+      return;
+    }
+    try {
+      await sendPasswordResetEmail(auth, email);
+      Alert.alert('Password Reset Email Sent', 'Please check your email to reset your password.');
+    } catch (error) {
+      alert(error.message);
+    }
+  };
+
   const handleSignUp = () => {
     navigation.navigate("Signup");
   };
@@ -99,7 +112,10 @@ const LoginScreen = () => {
         <Text style={styles.buttonOutlineText}>Login</Text>
       </TouchableOpacity>
       <TouchableOpacity onPress={handleSignUp} style={[styles.signupButton]}>
-        <Text style={[styles.signupText, { color: themeColor }]}>            Register ?</Text>
+        <Text style={[styles.signupText, { color: themeColor }]}>           Register?</Text>
+      </TouchableOpacity>
+      <TouchableOpacity onPress={handleForgotPassword} style={[styles.signupButton]}>
+        <Text style={[styles.signupText, { color: themeColor }]}>           Forgot Password?</Text>
       </TouchableOpacity>
       {loading && (
         <View style={styles.loadingContainer}>

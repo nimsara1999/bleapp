@@ -65,7 +65,7 @@ const SignupScreen = () => {
         console.log('Registered with:', user.email);
         setRegistered(true);
         setLoading(false); // Set loading state to false when registration is successful
-        navigation.navigate('Login');
+        navigation.navigate('Home');
       })
       .catch(error => {
         setLoading(false); // Set loading state to false if registration fails
