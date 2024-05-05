@@ -46,7 +46,7 @@ export default function HomeScreen() {
         setConnectionStatus("Error searching for devices");
         return;
       }
-      if (device.name === "Step-Sense") {
+      if (device.name === "ESP32BLE") {
         bleManager.stopDeviceScan();
         setConnectionStatus("Connecting...");
         connectToDevice(device);

@@ -1,9 +1,9 @@
+// HomeScreen.js
 import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, Modal, TouchableWithoutFeedback, Image,Button } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { auth } from '../firebase';
-import { BleScreen } from './BleScreen';
-import { Ionicons } from '@expo/vector-icons'; // Import Ionicons from Expo
+import NavigationBar from '../components/NavigationBar'; // Import NavigationBar component
 
 const HomeScreen = () => {
   const navigation = useNavigation();
@@ -25,12 +25,7 @@ const HomeScreen = () => {
   return (
     <View style={styles.container}>
       {/* Navigation Bar */}
-      <View style={styles.navBar}>
-        <Image source={require('../assets/logo.png')} style={styles.logo} />
-        <TouchableOpacity style={styles.userIcon} onPress={() => setModalVisible(true)}>
-          <Ionicons name="person" size={24} color="white" />
-        </TouchableOpacity>
-      </View>
+      <NavigationBar onPressUserIcon={() => setModalVisible(true)} />
 
       <Modal
         transparent={true}
@@ -54,7 +49,7 @@ const HomeScreen = () => {
       </Modal>
 
       <TouchableOpacity onPress={handleAddDevice} style={styles.buttonAddDevice}>
-        <Text style={styles.buttonText}>Add device</Text>
+        <Text style={styles.buttonText}>Connect device</Text>
       </TouchableOpacity>
     </View>
   );
@@ -66,29 +61,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     alignItems: 'center',
-    backgroundColor: 'white', // Added white background for the screen
-  },
-  navBar: {
-    backgroundColor:'#902bf5', // Blue color for the navigation bar
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    width: '100%',
-    height: 50, // Set desired height for the navigation bar
-  },
-  navTitle: {
-    color: 'white',
-    fontSize: 15,
-    fontWeight: 'bold',
-  },
-  userIcon: {
-    marginLeft: 20,
-  },
-  logo: {
-    width: 40,
-    height: 40,
+    backgroundColor: 'white',
   },
   buttonSignOut: {
     backgroundColor: 'red',
@@ -104,7 +77,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   buttonAddDevice: {
-    backgroundColor: '#902bf5',
+    backgroundColor: '#7836b3',
     width: '50%',
     padding: 15,
     borderRadius: 10,
@@ -134,7 +107,7 @@ const styles = StyleSheet.create({
   },
   modalBackground: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)', // Semi-transparent background when modal is open
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
   },
