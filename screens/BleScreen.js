@@ -1,10 +1,18 @@
-import React, { useState, useEffect, useRef } from "react";
-import { StyleSheet, Text, View, PermissionsAndroid } from "react-native";
+import React from "react";
+import {
+  StyleSheet,
+  Text,
+  View,
+  PermissionsAndroid,
+} from "react-native";
 import { BleManager } from "react-native-ble-plx";
+import { useState, useEffect, useRef } from "react";
 import { atob } from "react-native-quick-base64";
+import NavigationBar from "../components/NavigationBar";
 
 const bleManager = new BleManager();
 
+// Android Bluetooth Permission
 async function requestLocationPermission() {
   try {
     const granted = await PermissionsAndroid.request(
@@ -28,13 +36,15 @@ async function requestLocationPermission() {
   }
 }
 
+requestLocationPermission();
+
 const SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
 const STEP_DATA_CHAR_UUID = "beefcafe-36e1-4688-b7f5-00000000000b";
 
-export default function HomeScreen() {
+export default function BleScreen() {
   const [deviceID, setDeviceID] = useState(null);
   const [stepCount, setStepCount] = useState(0);
-  const [stepDataChar, setStepDataChar] = useState(null);
+  const [stepDataChar, setStepDataChar] = useState(null); // Not Used
   const [connectionStatus, setConnectionStatus] = useState("Searching...");
 
   const deviceRef = useRef(null);
@@ -46,7 +56,7 @@ export default function HomeScreen() {
         setConnectionStatus("Error searching for devices");
         return;
       }
-      if (device.name === "ESP32BLE") {
+      if (device.name === "ESP32") {
         bleManager.stopDeviceScan();
         setConnectionStatus("Connecting...");
         connectToDevice(device);
@@ -55,7 +65,6 @@ export default function HomeScreen() {
   };
 
   useEffect(() => {
-    requestLocationPermission();
     searchAndConnectToDevice();
   }, []);
 
@@ -105,7 +114,7 @@ export default function HomeScreen() {
         }
         setConnectionStatus("Disconnected");
         console.log("Disconnected device");
-        setStepCount(0);
+        setStepCount(0); // Reset the step count
         if (deviceRef.current) {
           setConnectionStatus("Reconnecting...");
           connectToDevice(deviceRef.current)
@@ -122,7 +131,11 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <Text>{connectionStatus}</Text>
+      <View style={styles.content}>
+        <Text style={styles.connectionStatus}>{connectionStatus}</Text>
+        <Text style={styles.connectionStatus}>Step Count: {stepCount}</Text>
+      </View>
+      <NavigationBar />
     </View>
   );
 }
@@ -132,5 +145,16 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
+  },
+  content: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  connectionStatus: {
+    fontSize: 20,
+    color: "black",
+    fontWeight: "bold",
+    fontFamily: "System",
   },
 });
