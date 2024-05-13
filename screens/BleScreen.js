@@ -1,70 +1,89 @@
-import React from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   StyleSheet,
   Text,
   View,
   PermissionsAndroid,
+  TouchableOpacity,
+  Platform,
 } from "react-native";
 import { BleManager } from "react-native-ble-plx";
-import { useState, useEffect, useRef } from "react";
-import { atob } from "react-native-quick-base64";
+import { atob, btoa } from "react-native-quick-base64";
 import NavigationBar from "../components/NavigationBar";
 
 const bleManager = new BleManager();
 
-// Android Bluetooth Permission
-async function requestLocationPermission() {
+async function requestBluetoothPermissions() {
   try {
-    const granted = await PermissionsAndroid.request(
-      PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION,
-      {
-        title: "Location permission for bluetooth scanning",
-        message:
-          "Grant location permission to allow the app to scan for Bluetooth devices",
-        buttonNeutral: "Ask Me Later",
-        buttonNegative: "Cancel",
-        buttonPositive: "OK",
+    const bluetoothPermissions = [
+      PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
+      PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
+    ];
+
+    const locationPermission = PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION;
+
+    let granted;
+
+    if (Platform.Version >= 31) {
+      granted = await PermissionsAndroid.requestMultiple(bluetoothPermissions);
+      if (granted['android.permission.BLUETOOTH_SCAN'] === PermissionsAndroid.RESULTS.GRANTED &&
+          granted['android.permission.BLUETOOTH_CONNECT'] === PermissionsAndroid.RESULTS.GRANTED) {
+        console.log("Bluetooth permissions for Android 12+ granted");
+      } else {
+        console.log("Bluetooth permissions for Android 12+ denied");
       }
-    );
-    if (granted === PermissionsAndroid.RESULTS.GRANTED) {
-      console.log("Location permission for bluetooth scanning granted");
     } else {
-      console.log("Location permission for bluetooth scanning denied");
+      granted = await PermissionsAndroid.request(
+        locationPermission,
+        {
+          title: "Location Permission",
+          message: "This app needs location access to discover Bluetooth devices.",
+          buttonNeutral: "Ask Me Later",
+          buttonNegative: "Cancel",
+          buttonPositive: "OK",
+        }
+      );
+
+      if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+        console.log("Location permission granted");
+      } else {
+        console.log("Location permission denied");
+      }
     }
   } catch (err) {
     console.warn(err);
   }
 }
 
-requestLocationPermission();
+requestBluetoothPermissions();
 
 const SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
-const STEP_DATA_CHAR_UUID = "beefcafe-36e1-4688-b7f5-00000000000b";
+const CUSTOM_CHAR_UUID = "beefcafe-36e1-4688-b7f5-00000000000b";
+const BUTTON1_CHAR_UUID = "deadbeef-36e1-4688-b7f5-000000000001";
+const BUTTON2_CHAR_UUID = "cafebeef-36e1-4688-b7f5-000000000002";
 
 export default function BleScreen() {
   const [deviceID, setDeviceID] = useState(null);
-  const [stepCount, setStepCount] = useState(0);
-  const [stepDataChar, setStepDataChar] = useState(null); // Not Used
+  const [customChar, setCustomChar] = useState(null);
   const [connectionStatus, setConnectionStatus] = useState("Searching...");
 
   const deviceRef = useRef(null);
 
-  const searchAndConnectToDevice = () => {
-    bleManager.startDeviceScan(null, null, (error, device) => {
-      if (error) {
-        console.error(error);
-        setConnectionStatus("Error searching for devices");
-        return;
-      }
-      if (device.name === "ESP32") {
-        bleManager.stopDeviceScan();
-        setConnectionStatus("Connecting...");
-        connectToDevice(device);
-      }
-    });
-  };
-
   useEffect(() => {
+    const searchAndConnectToDevice = () => {
+      bleManager.startDeviceScan(null, null, (error, device) => {
+        if (error) {
+          console.error(error);
+          setConnectionStatus("Error searching for devices");
+          return;
+        }
+        if (device.name === "ESP32_BLE") {
+          bleManager.stopDeviceScan();
+          setConnectionStatus("Connecting...");
+          connectToDevice(device);
+        }
+      });
+    };
     searchAndConnectToDevice();
   }, []);
 
@@ -81,28 +100,32 @@ export default function BleScreen() {
         return device.services();
       })
       .then((services) => {
-        let service = services.find((service) => service.uuid === SERVICE_UUID);
+        const service = services.find(s => s.uuid.toUpperCase() === SERVICE_UUID.toUpperCase());
         return service.characteristics();
       })
       .then((characteristics) => {
-        let stepDataCharacteristic = characteristics.find(
-          (char) => char.uuid === STEP_DATA_CHAR_UUID
+        const customCharacteristic = characteristics.find(
+          char => char.uuid.toUpperCase() === CUSTOM_CHAR_UUID.toUpperCase()
         );
-        setStepDataChar(stepDataCharacteristic);
-        stepDataCharacteristic.monitor((error, char) => {
-          if (error) {
-            console.error(error);
-            return;
-          }
-          const rawStepData = atob(char.value);
-          console.log("Received step data:", rawStepData);
-          setStepCount(rawStepData);
-        });
+        setCustomChar(customCharacteristic);
+        // Monitor new characteristics for notifications
+        monitorCharacteristic(BUTTON1_CHAR_UUID);
+        monitorCharacteristic(BUTTON2_CHAR_UUID);
       })
       .catch((error) => {
-        console.log(error);
+        console.error(error);
         setConnectionStatus("Error in Connection");
       });
+  };
+
+  const monitorCharacteristic = (charUuid) => {
+    deviceRef.current.monitorCharacteristicForService(SERVICE_UUID, charUuid, (error, characteristic) => {
+      if (error) {
+        console.error(`Error setting up notification for ${charUuid}:`, error);
+        return;
+      }
+      console.log(`Notification from ${charUuid}:`, atob(characteristic.value));
+    });
   };
 
   useEffect(() => {
@@ -110,17 +133,16 @@ export default function BleScreen() {
       deviceID,
       (error, device) => {
         if (error) {
-          console.log("Disconnected with error:", error);
+          console.error("Disconnected with error:", error);
         }
         setConnectionStatus("Disconnected");
         console.log("Disconnected device");
-        setStepCount(0); // Reset the step count
         if (deviceRef.current) {
           setConnectionStatus("Reconnecting...");
           connectToDevice(deviceRef.current)
             .then(() => setConnectionStatus("Connected"))
             .catch((error) => {
-              console.log("Reconnection failed: ", error);
+              console.error("Reconnection failed: ", error);
               setConnectionStatus("Reconnection failed");
             });
         }
@@ -129,11 +151,34 @@ export default function BleScreen() {
     return () => subscription.remove();
   }, [deviceID]);
 
+  const writeGetButton2 = async () => {
+    if (!customChar) {
+      console.log("Custom characteristic not found");
+      return;
+    }
+    await customChar.writeWithResponse(btoa("get/button2"));
+    console.log("Wrote 'get/button2' to BLE device");
+  };
+
+  const writeGetButton1 = async () => {
+    if (!customChar) {
+      console.log("Custom characteristic not found");
+      return;
+    }
+    await customChar.writeWithResponse(btoa("get/button1"));
+    console.log("Wrote 'get/button1' to BLE device");
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.content}>
         <Text style={styles.connectionStatus}>{connectionStatus}</Text>
-        <Text style={styles.connectionStatus}>Step Count: {stepCount}</Text>
+        <TouchableOpacity onPress={writeGetButton1} style={styles.button}>
+          <Text style={styles.buttonText}>Update Button 1</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={writeGetButton2} style={styles.button}>
+          <Text style={styles.buttonText}>Update Button 2</Text>
+        </TouchableOpacity>
       </View>
       <NavigationBar />
     </View>
@@ -156,5 +201,16 @@ const styles = StyleSheet.create({
     color: "black",
     fontWeight: "bold",
     fontFamily: "System",
+  },
+  button: {
+    marginTop: 20,
+    padding: 10,
+    backgroundColor: "blue",
+    borderRadius: 5,
+    marginBottom: 10,
+  },
+  buttonText: {
+    color: "white",
+    fontWeight: "bold",
   },
 });
