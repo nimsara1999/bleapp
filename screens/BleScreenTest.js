@@ -7,15 +7,12 @@ import {
   PermissionsAndroid,
   Platform,
   Animated,
-  ScrollView,
-  Alert
+  ScrollView
 } from "react-native";
 import { BleManager } from "react-native-ble-plx";
 import { atob, btoa } from "react-native-quick-base64";
 import NavigationBar from "../components/NavigationBar";
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { useNavigation } from '@react-navigation/native';
-
 
 const bleManager = new BleManager();
 
@@ -73,7 +70,6 @@ export default function BleScreen() {
   const [receivedData, setReceivedData] = useState([]);
   const rotation = useRef(new Animated.Value(0)).current;
   const deviceRef = useRef(null);
-  const navigation = useNavigation();
 
   useEffect(() => {
     const checkConnectedDevice = async () => {
@@ -82,7 +78,6 @@ export default function BleScreen() {
         const connectedDevice = connectedDevices[0];
         connectToDevice(connectedDevice);
       } else {
-        console.log("No connected devices found. Searching...");
         searchAndConnectToDevice();
       }
     };
@@ -166,16 +161,13 @@ export default function BleScreen() {
         setConnectionStatus("Disconnected");
         console.log("Disconnected device");
 
-        try {
-          if (deviceRef.current) {
-            await bleManager.cancelDeviceConnection(deviceRef.current.id);
-            deviceRef.current = null;
-          }
-        } catch (error) {
-          console.log("Error cancelling device connection: ", error);
+        if (deviceRef.current) {
+          await bleManager.cancelDeviceConnection(deviceRef.current.id);
+          deviceRef.current = null;
         }
-        Alert.alert('Bluetooth Connection Issue', 'Please check bluetooth connection of your device. Then try again.');
-        navigation.navigate('Home');
+        
+        setConnectionStatus("Searching...");
+        searchAndConnectToDevice();
       }
     );
     return () => subscription.remove();
