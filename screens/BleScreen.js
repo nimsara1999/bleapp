@@ -8,7 +8,8 @@ import {
   Platform,
   Animated,
   ScrollView,
-  Alert
+  Alert,
+  ActivityIndicator,
 } from "react-native";
 import { BleManager } from "react-native-ble-plx";
 import { atob, btoa } from "react-native-quick-base64";
@@ -71,6 +72,7 @@ export default function BleScreen() {
   const [connectionStatus, setConnectionStatus] = useState("Searching...");
   const [receivedData, setReceivedData] = useState([]);
   const [lastPressedButton, setLastPressedButton] = useState(null);
+  const [isLoading, setIsLoading] = useState(false); // State to control the loading animation
   const rotation = useRef(new Animated.Value(0)).current;
   const deviceRef = useRef(null);
   const navigation = useNavigation();
@@ -139,23 +141,27 @@ export default function BleScreen() {
     deviceRef.current.monitorCharacteristicForService(SERVICE_UUID, charUuid, (error, characteristic) => {
       if (error) {
         console.log(`Error setting up notification for ${charUuid}:`, error);
+        setIsLoading(false); // Stop loading animation on error
         return;
       }
+      setIsLoading(true);
       let epochTime = parseInt(atob(characteristic.value), 10);
       let date = new Date(epochTime * 1000); // Convert seconds to milliseconds
       let dateString = date.toLocaleString(); // Converts to local date-time string
       setReceivedData(prevData => {
         const updatedData = [...prevData, dateString];
-        // Keep only the last 30 entries to maintain 15 rows of 2 columns
+        if(updatedData.length >=26) {
+          setIsLoading(false);
+        }
         if (updatedData.length > 30) {
-          return updatedData.slice(-30);
+          return updatedData.slice(30);
         }
         return updatedData;
       });
-      console.log(`${charUuid}:`, dateString);
+      //console.log(`${charUuid}:`, dateString);
     });
   };
-  
+
   useEffect(() => {
     const subscription = bleManager.onDeviceDisconnected(
       deviceID,
@@ -268,43 +274,48 @@ export default function BleScreen() {
 
   return (
     <View style={styles.container}>
-            <View style={styles.statusIcon}>
-          <StatusIcon />
+      <View style={styles.statusIcon}>
+        <StatusIcon />
+      </View>
+      {isLoading && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="xl" color="#7836b3" />
         </View>
+      )}
       <View style={styles.content}>
         {/* Row for Button 1 */}
         <View style={styles.pagination}>
-        <View style={styles.row}>
-          <Text style={styles.label}>BUTTON ONE</Text>
-          <TouchableOpacity onPress={() => writeGetButton("get/button1/1-30", 1)} style={buttonStyle(1)}>
-            <Text style={styles.buttonText}>1</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => writeGetButton("get/button1/31-60", 2)} style={buttonStyle(2)}>
-            <Text style={styles.buttonText}>2</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => writeGetButton("get/button1/61-90", 3)} style={buttonStyle(3)}>
-            <Text style={styles.buttonText}>3</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => writeGetButton("get/button1/91-120", 4)} style={buttonStyle(4)}>
-            <Text style={styles.buttonText}>4</Text>
-          </TouchableOpacity>
-        </View>
-        {/* Row for Button 2 */}
-        <View style={styles.row}>
-          <Text style={styles.label}>BUTTON TWO</Text>
-          <TouchableOpacity onPress={() => writeGetButton("get/button2/1-30", 5)} style={buttonStyle(5)}>
-            <Text style={styles.buttonText}>1</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => writeGetButton("get/button2/31-60", 6)} style={buttonStyle(6)}>
-            <Text style={styles.buttonText}>2</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => writeGetButton("get/button2/61-90", 7)} style={buttonStyle(7)}>
-            <Text style={styles.buttonText}>3</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => writeGetButton("get/button2/91-120", 8)} style={buttonStyle(8)}>
-            <Text style={styles.buttonText}>4</Text>
-          </TouchableOpacity>
-        </View>
+          <View style={styles.row}>
+            <Text style={styles.label}>BUTTON ONE</Text>
+            <TouchableOpacity onPress={() => writeGetButton("get/button1/1-30", 1)} style={buttonStyle(1)}>
+              <Text style={styles.buttonText}>1</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => writeGetButton("get/button1/31-60", 2)} style={buttonStyle(2)}>
+              <Text style={styles.buttonText}>2</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => writeGetButton("get/button1/61-90", 3)} style={buttonStyle(3)}>
+              <Text style={styles.buttonText}>3</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => writeGetButton("get/button1/91-120", 4)} style={buttonStyle(4)}>
+              <Text style={styles.buttonText}>4</Text>
+            </TouchableOpacity>
+          </View>
+          {/* Row for Button 2 */}
+          <View style={styles.row}>
+            <Text style={styles.label}>BUTTON TWO</Text>
+            <TouchableOpacity onPress={() => writeGetButton("get/button2/1-30", 5)} style={buttonStyle(5)}>
+              <Text style={styles.buttonText}>1</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => writeGetButton("get/button2/31-60", 6)} style={buttonStyle(6)}>
+              <Text style={styles.buttonText}>2</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => writeGetButton("get/button2/61-90", 7)} style={buttonStyle(7)}>
+              <Text style={styles.buttonText}>3</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => writeGetButton("get/button2/91-120", 8)} style={buttonStyle(8)}>
+              <Text style={styles.buttonText}>4</Text>
+            </TouchableOpacity>
+          </View>
         </View>
         <ScrollView style={{ width: '100%' }}>
           {renderTable()}
@@ -321,7 +332,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  pagination:{
+  pagination: {
     backgroundColor: '#7836b3',
     alignItems: "center",
     justifyContent: "center",
@@ -387,5 +398,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
   },
-  
+  loadingOverlay: {
+    position: 'absolute',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 2,
+  },
 });
