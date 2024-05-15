@@ -16,7 +16,6 @@ import NavigationBar from "../components/NavigationBar";
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
 
-
 const bleManager = new BleManager();
 
 async function requestBluetoothPermissions() {
@@ -71,6 +70,7 @@ export default function BleScreen() {
   const [customChar, setCustomChar] = useState(null);
   const [connectionStatus, setConnectionStatus] = useState("Searching...");
   const [receivedData, setReceivedData] = useState([]);
+  const [lastPressedButton, setLastPressedButton] = useState(null);
   const rotation = useRef(new Animated.Value(0)).current;
   const deviceRef = useRef(null);
   const navigation = useNavigation();
@@ -181,14 +181,29 @@ export default function BleScreen() {
     return () => subscription.remove();
   }, [deviceID]);
 
-  const writeGetButton = async (sendData) => {
+  const writeGetButton = async (sendData, buttonId) => {
     if (!customChar) {
       console.log("Custom characteristic not found");
+      Alert.alert('Bluetooth Not Connected.', 'Please connect your device to Bluetooth before requesting data.');
       return;
     }
     await customChar.writeWithResponse(btoa(sendData));
     console.log(`Wrote '${sendData}' to BLE device`);
+    setLastPressedButton(buttonId); // Update the last pressed button state
   };
+
+  const buttonStyle = (buttonId) => ({
+    padding: 8,
+    backgroundColor: lastPressedButton === buttonId ? '#b368ff' : '#9b37ff', // 'Tomato' for active, purple otherwise
+    borderRadius: 10,
+    width: 35,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 5,
+  });
 
   const renderTable = () => {
     // Ensure there are always 30 entries (15 rows of 2 columns)
@@ -253,41 +268,43 @@ export default function BleScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.content}>
-        <View style={styles.statusIcon}>
+            <View style={styles.statusIcon}>
           <StatusIcon />
         </View>
+      <View style={styles.content}>
         {/* Row for Button 1 */}
+        <View style={styles.pagination}>
         <View style={styles.row}>
-          <Text style={styles.label}>Button 1</Text>
-          <TouchableOpacity onPress={() => writeGetButton("get/button1/1-30")} style={styles.button}>
+          <Text style={styles.label}>BUTTON ONE</Text>
+          <TouchableOpacity onPress={() => writeGetButton("get/button1/1-30", 1)} style={buttonStyle(1)}>
             <Text style={styles.buttonText}>1</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => writeGetButton("get/button1/31-60")} style={styles.button}>
+          <TouchableOpacity onPress={() => writeGetButton("get/button1/31-60", 2)} style={buttonStyle(2)}>
             <Text style={styles.buttonText}>2</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => writeGetButton("get/button1/61-90")} style={styles.button}>
+          <TouchableOpacity onPress={() => writeGetButton("get/button1/61-90", 3)} style={buttonStyle(3)}>
             <Text style={styles.buttonText}>3</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => writeGetButton("get/button1/91-120")} style={styles.button}>
+          <TouchableOpacity onPress={() => writeGetButton("get/button1/91-120", 4)} style={buttonStyle(4)}>
             <Text style={styles.buttonText}>4</Text>
           </TouchableOpacity>
         </View>
         {/* Row for Button 2 */}
         <View style={styles.row}>
-          <Text style={styles.label}>Button 2</Text>
-          <TouchableOpacity onPress={() => writeGetButton("get/button2/1-30")} style={styles.button}>
-            <Text style={styles.buttonText}>5</Text>
+          <Text style={styles.label}>BUTTON TWO</Text>
+          <TouchableOpacity onPress={() => writeGetButton("get/button2/1-30", 5)} style={buttonStyle(5)}>
+            <Text style={styles.buttonText}>1</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => writeGetButton("get/button2/31-60")} style={styles.button}>
-            <Text style={styles.buttonText}>6</Text>
+          <TouchableOpacity onPress={() => writeGetButton("get/button2/31-60", 6)} style={buttonStyle(6)}>
+            <Text style={styles.buttonText}>2</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => writeGetButton("get/button2/61-90")} style={styles.button}>
-            <Text style={styles.buttonText}>7</Text>
+          <TouchableOpacity onPress={() => writeGetButton("get/button2/61-90", 7)} style={buttonStyle(7)}>
+            <Text style={styles.buttonText}>3</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => writeGetButton("get/button2/91-120")} style={styles.button}>
-            <Text style={styles.buttonText}>8</Text>
+          <TouchableOpacity onPress={() => writeGetButton("get/button2/91-120", 8)} style={buttonStyle(8)}>
+            <Text style={styles.buttonText}>4</Text>
           </TouchableOpacity>
+        </View>
         </View>
         <ScrollView style={{ width: '100%' }}>
           {renderTable()}
@@ -304,21 +321,37 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  content: {
-    flex: 1,
+  pagination:{
+    backgroundColor: '#7836b3',
     alignItems: "center",
     justifyContent: "center",
+    paddingBottom: 10,
+    paddingTop: 5,
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 10,
+  },
+  content: {
+    flex: 1,
+    justifyContent: "center",
+    marginTop: 50,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    marginTop: 10,
-    width: '60%',
+    marginTop: 5,
+    width: '89%',
   },
   label: {
+    borderRadius: 5,
+    padding: 5,
+    color: 'white',
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: 13,
   },
   connectionStatus: {
     fontSize: 20,
@@ -329,32 +362,30 @@ const styles = StyleSheet.create({
   },
   statusIcon: {
     position: 'absolute',
-    right: -50,
     top: 10,
     zIndex: 1,
   },
-  button: {
-    padding: 5,
-    backgroundColor:'#7836b3',
-    borderRadius: 5,
-    width: 30,
-    alignItems: 'center',
-  },
   buttonText: {
+    fontSize: 12,
     color: "white",
+    fontWeight: "bold",
   },
   table: {
-    marginTop: 10,
+    marginTop: 20,
     alignSelf: 'center',
     backgroundColor: '#f0f0f0',
     borderRadius: 10,
-    padding: 10,
+    padding: 5,
     width: '100%', // Adjusted width for better layout
   },
   tableRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 5,
+    paddingVertical: 6,
+  },
+  tableCell: {
+    fontSize: 14,
+    fontWeight: 'bold',
   },
   
 });

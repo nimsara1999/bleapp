@@ -80,7 +80,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 6,
     elevation: 10,
-    paddingBottom: 2,
+    paddingBottom: 3,
   },
   homeIcon: {
     position: 'absolute',
