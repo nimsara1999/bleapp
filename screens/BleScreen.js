@@ -187,7 +187,31 @@ export default function BleScreen() {
     return () => subscription.remove();
   }, [deviceID]);
 
+
+  
+  const writeEpochToEsp32 = async () => {
+    if (!customChar) {
+      console.log("Custom characteristic not found");
+      Alert.alert('Bluetooth Not Connected.', 'Please connect your device to Bluetooth before requesting data.');
+      return;
+    }
+    
+    const currentTime = new Date(); // Get the current local time
+    const epochTime = Math.floor(currentTime.getTime() / 1000); // Convert to epoch timestamp in seconds
+    const epochTimeString = epochTime.toString(); // Convert the epoch time to string
+    
+    try {
+      await customChar.writeWithResponse(btoa(epochTimeString)); // Convert string to base64 and write to the BLE device
+      console.log(`Wrote '${epochTimeString}' (epoch time) to BLE device`);
+    } catch (error) {
+      console.error("Failed to write epoch time to BLE device: ", error);
+      Alert.alert('Write Error', 'Failed to write data to the Bluetooth device. Please try again.');
+    }
+  };
+  
+
   const writeGetButton = async (sendData, buttonId) => {
+    writeEpochToEsp32();
     if (!customChar) {
       console.log("Custom characteristic not found");
       Alert.alert('Bluetooth Not Connected.', 'Please connect your device to Bluetooth before requesting data.');
