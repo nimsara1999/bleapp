@@ -150,7 +150,7 @@ export default function BleScreen() {
       let dateString = date.toLocaleString(); // Converts to local date-time string
       setReceivedData(prevData => {
         const updatedData = [...prevData, dateString];
-        if(updatedData.length >=26) {
+        if(updatedData.length >=30) {
           setIsLoading(false);
         }
         if (updatedData.length > 30) {
