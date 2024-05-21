@@ -6,19 +6,16 @@ const BluetoothInstructions = () => {
     <View style={styles.container}>
       <Text style={styles.title}>Bluetooth Connection Instructions</Text>
       <Text style={styles.instruction}>
-        1. Make sure Bluetooth is enabled on your device.
+        1. Turn on Bluetooth on your mobile phone.
       </Text>
       <Text style={styles.instruction}>
-        2. Open the settings menu and navigate to Bluetooth.
+        2. Turn on Bluetooth from the device. (Blue LED will turn on.)
       </Text>
       <Text style={styles.instruction}>
-        3. Select the device you want to connect to.
+        3. Press "Connect device" button above.
       </Text>
       <Text style={styles.instruction}>
-        4. If prompted, enter the pairing code provided with your device.
-      </Text>
-      <Text style={styles.note}>
-        Note: Make sure the device you're connecting to is in pairing mode.
+        4. You will navigate to Bluetooth page and automatically connect. (Green LED will turn on.)
       </Text>
     </View>
   );

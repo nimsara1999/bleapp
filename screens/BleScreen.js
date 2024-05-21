@@ -139,12 +139,12 @@ export default function BleScreen() {
 
   const monitorCharacteristic = (charUuid) => {
     deviceRef.current.monitorCharacteristicForService(SERVICE_UUID, charUuid, (error, characteristic) => {
+      setIsLoading(true);
       if (error) {
         console.log(`Error setting up notification for ${charUuid}:`, error);
         setIsLoading(false); // Stop loading animation on error
         return;
       }
-      setIsLoading(true);
       let epochTime = parseInt(atob(characteristic.value), 10);
       let date = new Date(epochTime * 1000); // Convert seconds to milliseconds
       let dateString = date.toLocaleString(); // Converts to local date-time string
@@ -225,8 +225,9 @@ export default function BleScreen() {
   const buttonStyle = (buttonId) => ({
     padding: 8,
     backgroundColor: lastPressedButton === buttonId ? '#b368ff' : '#9b37ff', // 'Tomato' for active, purple otherwise
-    borderRadius: 10,
-    width: 35,
+    borderRadius: 10, 
+    width: lastPressedButton === buttonId ? 38 : 35,
+    height: lastPressedButton === buttonId ? 36 : 32,
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -304,6 +305,7 @@ export default function BleScreen() {
       {isLoading && (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="xl" color="#7836b3" />
+
         </View>
       )}
       <View style={styles.content}>
@@ -368,6 +370,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 6,
     elevation: 10,
+    height: 91,
   },
   content: {
     flex: 1,

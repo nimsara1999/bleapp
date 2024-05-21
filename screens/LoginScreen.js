@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Animated, Keyboard, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View, ActivityIndicator, Image, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/core';
-import { auth } from '../firebase';
+import { auth } from '../firebaseData';
 import { signInWithEmailAndPassword, sendPasswordResetEmail, onAuthStateChanged } from "firebase/auth";
 
 // Theme color variable

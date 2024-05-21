@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { View, TouchableOpacity, Image, Modal, TouchableWithoutFeedback, Text, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { auth } from '../firebase';
+import { auth } from '../firebaseData';
 import { Ionicons } from '@expo/vector-icons';
 import AntDesign from '@expo/vector-icons/AntDesign'
 

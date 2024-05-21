@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Animated, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View, Alert, Image, ActivityIndicator, Keyboard} from 'react-native';
 import { useNavigation } from '@react-navigation/core';
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { auth } from '../firebase';
+import { auth } from '../firebaseData';
 
 const themeColor = '#7836b3';
 
