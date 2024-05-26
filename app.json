@@ -1,6 +1,7 @@
 {
   "expo": {
     "name": "bleapp",
+    "displayName": "WolvesBLE",
     "slug": "bleapp",
     "version": "1.0.0",
     "orientation": "portrait",

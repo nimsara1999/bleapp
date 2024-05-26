@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Animated, Keyboard, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View, ActivityIndicator, Image, Alert } from 'react-native';
+import { Animated, Keyboard, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View, ActivityIndicator, Image, Alert, StatusBar } from 'react-native';
 import { useNavigation } from '@react-navigation/core';
 import { auth } from '../firebaseData';
 import { signInWithEmailAndPassword, sendPasswordResetEmail, onAuthStateChanged } from "firebase/auth";
@@ -63,7 +63,12 @@ const LoginScreen = () => {
       const userCredentials = await signInWithEmailAndPassword(auth, email, password);
       console.log('Logged in with:', userCredentials.user.email);
     } catch (error) {
-      alert(error.message);
+      if(error.code == "auth/invalid-credential"){
+        Alert.alert('Invalid Credentials', 'Please enter a valid email and password.');
+      }
+      else{
+        alert(error.code);
+      }
     } finally {
       setLoading(false);
     }
@@ -87,7 +92,8 @@ const LoginScreen = () => {
   };
 
   return (
-    <KeyboardAvoidingView style={[styles.container, styles.background]} behavior="padding">
+    <KeyboardAvoidingView style={[styles.container]} behavior="padding">
+    <StatusBar barStyle="dark-content" backgroundColor={themeColor} />
       {!keyboardVisible && (
         <Animated.View style={[styles.boxContainer, styles.box, { transform: [{ translateY: logoPosition }] }]}>
           <Image source={require('../assets/logo1.png')} style={styles.logo} />
@@ -131,12 +137,10 @@ export default LoginScreen;
 
 const styles = StyleSheet.create({
   container: {
+    backgroundColor: 'white',
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  background: {
-    backgroundColor: 'rgba(249, 242, 255)', // Lavender color
   },
   boxContainer: {
     position: 'absolute',

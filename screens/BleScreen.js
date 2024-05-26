@@ -87,12 +87,16 @@ export default function BleScreen() {
         console.log("No connected devices found. Searching...");
         searchAndConnectToDevice();
       }
+      //
     };
 
     const searchAndConnectToDevice = () => {
       bleManager.startDeviceScan(null, null, (error, device) => {
         if (error) {
-          console.log(error);
+          if (error.message === "BluetoothLE is powered off") {
+            Alert.alert('Bluetooth Not Turned On', 'Please turn on the Bluetooth of your mobile phone. (No need to pair with device.)');
+            navigation.navigate('Home');
+          }
           setConnectionStatus("Error searching for devices");
           return;
         }
@@ -134,6 +138,7 @@ export default function BleScreen() {
       .catch((error) => {
         console.log("Error in connection: ", error);
         setConnectionStatus("Error in Connection");
+        navigation.navigate('Home');
       });
   };
 
@@ -357,6 +362,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: 'white',
   },
   pagination: {
     backgroundColor: '#7836b3',
@@ -411,7 +417,7 @@ const styles = StyleSheet.create({
   table: {
     marginTop: 20,
     alignSelf: 'center',
-    backgroundColor: '#f0f0f0',
+    backgroundColor: 'white',
     borderRadius: 10,
     padding: 5,
     width: '100%', // Adjusted width for better layout

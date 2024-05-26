@@ -1,9 +1,10 @@
 // HomeScreen.js
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, StatusBar } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { BleScreen } from './BleScreen';
-import NavigationBar from '../components/NavigationBar';
+import NavigationBar from '../components/NavigationBar'; 
+import BluetoothInstructions from '../components/BluetoothInstructions';
 
 const HomeScreen = () => {
   const navigation = useNavigation();
@@ -14,12 +15,16 @@ const HomeScreen = () => {
 
   return (
     <View style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor='white' />
       <View style={styles.content}>
         <TouchableOpacity onPress={handleAddDevice} style={styles.buttonAddDevice}>
           <Text style={styles.buttonText}>Connect device</Text>
         </TouchableOpacity>
       </View>
-      <NavigationBar /> 
+      <View style={styles.content2}>
+      <BluetoothInstructions />
+      </View>
+      <NavigationBar />
     </View>
   );
 };
@@ -34,12 +39,25 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  content2: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
+    marginBottom: 50,
+    borderRadius: 10,
+  },
   buttonAddDevice: {
     backgroundColor: '#7836b3',
     width: '45%',
     padding: 12,
     borderRadius: 10,
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 10,
     
   },
   buttonText: {

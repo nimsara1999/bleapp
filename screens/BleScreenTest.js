@@ -7,12 +7,18 @@ import {
   PermissionsAndroid,
   Platform,
   Animated,
-  ScrollView
+  ScrollView,
+  Alert,
+  ActivityIndicator,
+  TextInput
 } from "react-native";
+import Slider from '@react-native-community/slider';
 import { BleManager } from "react-native-ble-plx";
 import { atob, btoa } from "react-native-quick-base64";
 import NavigationBar from "../components/NavigationBar";
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useNavigation } from '@react-navigation/native';
+
 
 const bleManager = new BleManager();
 
@@ -64,12 +70,15 @@ const BUTTON1_CHAR_UUID = "deadbeef-36e1-4688-b7f5-000000000001";
 const BUTTON2_CHAR_UUID = "cafebeef-36e1-4688-b7f5-000000000002";
 
 export default function BleScreen() {
+  const [sliderValue, setSliderValue] = useState(0);
+  const [inputValue, setInputValue] = useState('');
   const [deviceID, setDeviceID] = useState(null);
   const [customChar, setCustomChar] = useState(null);
   const [connectionStatus, setConnectionStatus] = useState("Searching...");
-  const [receivedData, setReceivedData] = useState([]);
+  const [lastPressedButton, setLastPressedButton] = useState(null);
   const rotation = useRef(new Animated.Value(0)).current;
   const deviceRef = useRef(null);
+  const navigation = useNavigation();
 
   useEffect(() => {
     const checkConnectedDevice = async () => {
@@ -78,6 +87,7 @@ export default function BleScreen() {
         const connectedDevice = connectedDevices[0];
         connectToDevice(connectedDevice);
       } else {
+        console.log("No connected devices found. Searching...");
         searchAndConnectToDevice();
       }
     };
@@ -136,21 +146,24 @@ export default function BleScreen() {
         console.log(`Error setting up notification for ${charUuid}:`, error);
         return;
       }
-      let epochTime = parseInt(atob(characteristic.value), 10);
-      let date = new Date(epochTime * 1000); // Convert seconds to milliseconds
-      let dateString = date.toLocaleString(); // Converts to local date-time string
-      setReceivedData(prevData => {
-        const updatedData = [...prevData, dateString];
-        // Keep only the last 30 entries to maintain 15 rows of 2 columns
-        if (updatedData.length > 30) {
-          return updatedData.slice(-30);
-        }
-        return updatedData;
-      });
-      console.log(`${charUuid}:`, dateString);
+      
+      let readData = atob(characteristic.value);
+      let splitData = readData.split('/');
+      let key = splitData[0]; // 'volume' or 'flowRate'
+      let value = parseInt(splitData[1], 10); // Convert second part to an integer
+  
+      // Conditional output based on the key
+      if (key === 'flowRate') {
+        setSliderValue(value);
+        console.log('Flow Rate:', value);
+      } else if (key === 'volume') {
+        setInputValue(value.toString());
+        console.log('Volume:', value);
+      }
     });
   };
   
+
   useEffect(() => {
     const subscription = bleManager.onDeviceDisconnected(
       deviceID,
@@ -161,48 +174,74 @@ export default function BleScreen() {
         setConnectionStatus("Disconnected");
         console.log("Disconnected device");
 
-        if (deviceRef.current) {
-          await bleManager.cancelDeviceConnection(deviceRef.current.id);
-          deviceRef.current = null;
+        try {
+          if (deviceRef.current) {
+            await bleManager.cancelDeviceConnection(deviceRef.current.id);
+            deviceRef.current = null;
+          }
+        } catch (error) {
+          console.log("Error cancelling device connection: ", error);
         }
-        
-        setConnectionStatus("Searching...");
-        searchAndConnectToDevice();
+        Alert.alert('Bluetooth Connection Issue', 'Please check bluetooth connection of your device. Then try again.');
+        navigation.navigate('Home');
       }
     );
     return () => subscription.remove();
   }, [deviceID]);
+  
 
-  const writeGetButton = async (sendData) => {
+  const writeGetButton = async (sendData, buttonId) => {
     if (!customChar) {
       console.log("Custom characteristic not found");
+      Alert.alert('Bluetooth Not Connected.', 'Please connect your device to Bluetooth before requesting data.');
+      return;
+    }
+    await customChar.writeWithResponse(btoa(sendData));
+    console.log(`Wrote '${sendData}' to BLE device`);
+    setLastPressedButton(buttonId); // Update the last pressed button state
+  };
+
+  const writeData = async (sendData) => {
+    if (!customChar) {
+      console.log("Custom characteristic not found");
+      Alert.alert('Bluetooth Not Connected.', 'Please connect your device to Bluetooth before requesting data.');
       return;
     }
     await customChar.writeWithResponse(btoa(sendData));
     console.log(`Wrote '${sendData}' to BLE device`);
   };
 
-  const renderTable = () => {
-    // Ensure there are always 30 entries (15 rows of 2 columns)
-    let displayData = receivedData.slice(-30); // Keep the last 30 entries
-    let rowData = [];
-    for (let i = 0; i < displayData.length; i += 2) {
-      rowData.push({
-        left: displayData[i],
-        right: displayData[i + 1] ? displayData[i + 1] : "",
-      });
+  const handleInputChange = (text) => {
+    // Only allow numbers and limit the range
+    const value = parseInt(text);
+    if (!isNaN(value) && value >= 1 && value <= 100) {
+      setInputValue(text);
+    } else {
+      // Clear input if it's out of the valid range
+      setInputValue('');
+      Alert.alert("Invalid Input", "Please enter a number between 1 and 100.");
     }
-    return (
-      <View style={styles.table}>
-        {rowData.map((pair, index) => (
-          <View key={index} style={styles.tableRow}>
-            <Text style={[styles.tableCell, { marginRight: 30 }]}>{pair.left}</Text>
-            <Text style={styles.tableCell}>{pair.right}</Text>
-          </View>
-        ))}
-      </View>
-    );
   };
+
+  const handleSliderChange = (value) => {
+    setSliderValue(Math.floor(value)); // Optionally, you can round the value if it's not an integer
+    writeData(`set/flowRate/${Math.floor(value)}`);
+  };
+
+  const buttonStyle = (buttonId) => ({
+    backgroundColor: lastPressedButton === buttonId ? '#7836b3':'#9b37ff', // 'Tomato' for active, purple otherwise
+    borderRadius: 10, 
+    width: lastPressedButton === buttonId ? 140 : 150,
+    height: lastPressedButton === buttonId ? 50 : 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: lastPressedButton === buttonId ? 0 : 6,
+  });
+
 
   const StatusIcon = () => {
     const spin = rotation.interpolate({ inputRange: [0, 360], outputRange: ["0deg", "360deg"] });
@@ -245,47 +284,54 @@ export default function BleScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.content}>
-        <View style={styles.statusIcon}>
-          <StatusIcon />
-        </View>
-        {/* Row for Button 1 */}
-        <View style={styles.row}>
-          <Text style={styles.label}>Button 1</Text>
-          <TouchableOpacity onPress={() => writeGetButton("get/button1/1-30")} style={styles.button}>
-            <Text style={styles.buttonText}>1</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => writeGetButton("get/button1/31-60")} style={styles.button}>
-            <Text style={styles.buttonText}>2</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => writeGetButton("get/button1/61-90")} style={styles.button}>
-            <Text style={styles.buttonText}>3</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => writeGetButton("get/button1/91-120")} style={styles.button}>
-            <Text style={styles.buttonText}>4</Text>
-          </TouchableOpacity>
-        </View>
-        {/* Row for Button 2 */}
-        <View style={styles.row}>
-          <Text style={styles.label}>Button 2</Text>
-          <TouchableOpacity onPress={() => writeGetButton("get/button2/1-30")} style={styles.button}>
-            <Text style={styles.buttonText}>5</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => writeGetButton("get/button2/31-60")} style={styles.button}>
-            <Text style={styles.buttonText}>6</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => writeGetButton("get/button2/61-90")} style={styles.button}>
-            <Text style={styles.buttonText}>7</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => writeGetButton("get/button2/91-120")} style={styles.button}>
-            <Text style={styles.buttonText}>8</Text>
-          </TouchableOpacity>
-        </View>
-        <ScrollView style={{ width: '100%' }}>
-          {renderTable()}
-        </ScrollView>
+      <View style={styles.statusIcon}>
+        <StatusIcon />
       </View>
-      <NavigationBar />
+      <View style={styles.content}>
+        {/* Row for Button 1 */}
+        <View style={styles.pagination}>
+
+          <View style={styles.row}>
+          <Text style={styles.buttonText}>Flow rate: {sliderValue}</Text>
+            <Slider
+              style={{width: 180, height: 80, sliderColor: 'white'}}
+              minimumValue={0}
+              maximumValue={100}
+              minimumTrackTintColor='white'
+              maximumTrackTintColor="white"
+              step={1}
+              value={sliderValue}
+              onValueChange={handleSliderChange}
+            />
+          </View>
+
+          <View style={styles.row}>
+            <TouchableOpacity onPress={() => writeData(`set/volume/${Math.floor(inputValue)}`)} style={styles.button}>
+              <Text style={styles.buttonText}>Set volume</Text>
+            </TouchableOpacity>
+            <TextInput
+              style={{ height: 50, borderColor: 'white', borderWidth: 1,  backgroundColor:"white", borderRadius: 10, width: 100, textAlign: 'center', fontSize:20, fontWeight: 'bold'}}
+                keyboardType='numeric'
+                onChangeText={handleInputChange}
+                value={inputValue}
+                placeholder= {inputValue}
+              />
+          </View>
+        </View>
+        <View style={styles.pagination2}>
+          <View style={styles.row2}>
+            <TouchableOpacity onPress={() => writeGetButton("get/initialData", 1)} style={buttonStyle(1)}>
+              <Text style={styles.buttonText}>Start Infusion</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.row2}>
+            <TouchableOpacity onPress={() => writeGetButton("set/stop", 2)} style={buttonStyle(2)}>
+              <Text style={styles.buttonText}>Stop Infusion</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
     </View>
   );
 }
@@ -296,21 +342,48 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  content: {
-    flex: 1,
+  pagination: {
+    backgroundColor: '#7836b3',
     alignItems: "center",
     justifyContent: "center",
+    paddingBottom: 50,
+    paddingTop: 20,
+    borderRadius: 20,
+    marginTop: -100,
+    
+  },
+  pagination2: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingBottom: 10,
+    paddingTop: 50,
+    borderRadius: 10,
+  },
+  content: {
+    flex: 1,
+    justifyContent: "center",
+    marginTop: 50,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
+    marginTop: 20,
+    width: '100%',
+  },
+  row2: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
     marginTop: 10,
-    width: '60%',
+    width: '100%',
   },
   label: {
+    borderRadius: 5,
+    padding: 5,
+    color: 'white',
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: 13,
   },
   connectionStatus: {
     fontSize: 20,
@@ -321,32 +394,25 @@ const styles = StyleSheet.create({
   },
   statusIcon: {
     position: 'absolute',
-    right: -50,
     top: 10,
     zIndex: 1,
   },
-  button: {
-    padding: 5,
-    backgroundColor:'#7836b3',
-    borderRadius: 5,
-    width: 30,
+  button:{
+    backgroundColor: '#b368ff',
+    borderRadius: 10, 
+    width: 100,
+    height: 50,
     alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 5,
   },
   buttonText: {
+    fontSize: 15,
     color: "white",
+    fontWeight: "bold",
   },
-  table: {
-    marginTop: 10,
-    alignSelf: 'center',
-    backgroundColor: '#f0f0f0',
-    borderRadius: 10,
-    padding: 10,
-    width: '100%', // Adjusted width for better layout
-  },
-  tableRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 5,
-  },
-  
 });

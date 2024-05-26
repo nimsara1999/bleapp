@@ -1,17 +1,33 @@
 import React, { useEffect, useState } from 'react';
-import { Animated, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View, Alert, Image, ActivityIndicator, Keyboard} from 'react-native';
+import {
+  Animated,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+  Alert,
+  Image,
+  ActivityIndicator,
+  Keyboard
+} from 'react-native';
 import { useNavigation } from '@react-navigation/core';
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { auth } from '../firebaseData';
 
 const themeColor = '#7836b3';
 
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{8,}$/;
+
 const SignupScreen = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [reenteredPassword, setReenteredPassword] = useState('');
   const [registered, setRegistered] = useState(false);
-  const [loading, setLoading] = useState(false); // State variable for loading animation
+  const [loading, setLoading] = useState(false);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [logoPosition] = useState(new Animated.Value(0));
   const navigation = useNavigation();
@@ -52,24 +68,34 @@ const SignupScreen = () => {
       return;
     }
 
+    if (!emailRegex.test(email)) {
+      Alert.alert('Invalid Email', 'Please enter a valid email address.');
+      return;
+    }
+
+    if (!passwordRegex.test(password)) {
+      Alert.alert('Invalid Password', 'Password must have at least 8 characters, including at least one uppercase letter, one lowercase letter, and one number.');
+      return;
+    }
+
     if (password !== reenteredPassword) {
       Alert.alert('Password Not Matched', 'Please make sure the passwords match.');
       return;
     }
 
-    setLoading(true); // Set loading state to true when registration begins
+    setLoading(true);
 
     createUserWithEmailAndPassword(auth, email, password)
       .then(userCredentials => {
         const user = userCredentials.user;
         console.log('Registered with:', user.email);
         setRegistered(true);
-        setLoading(false); // Set loading state to false when registration is successful
+        setLoading(false);
         navigation.navigate('Home');
       })
       .catch(error => {
-        setLoading(false); // Set loading state to false if registration fails
-        alert(error.message);
+        setLoading(false);
+        Alert.alert('Registration Failed', error.message);
       });
   };
 
@@ -108,12 +134,12 @@ const SignupScreen = () => {
       />
       <TouchableOpacity onPress={handleSignUp} style={[styles.button, { backgroundColor: themeColor }]}>
         {loading ? (
-          <ActivityIndicator size="small" color="white" /> // Display loading animation if loading is true
+          <ActivityIndicator size="small" color="white" />
         ) : (
           <Text style={styles.buttonText}>Register</Text>
         )}
       </TouchableOpacity>
-      <TouchableOpacity onPress={handleLogin} >
+      <TouchableOpacity onPress={handleLogin}>
         <Text style={[styles.signupText, { color: themeColor }]}>Login ?</Text>
       </TouchableOpacity>
       {registered && (
@@ -132,9 +158,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  background: {
-    backgroundColor: 'rgba(249, 242, 255)', // Lavender color
+    backgroundColor: 'white',
   },
   boxContainer: {
     position: 'absolute',
@@ -201,21 +225,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: 'green',
-  },
-  loginButton: {
-    position: 'absolute',
-    bottom: 20,
-    left: 20,
-    zIndex: 1,
-    padding: 5,
-    borderRadius: 8,
-    alignItems: 'center',
-    backgroundColor: themeColor,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 10,
   },
   logo: {
     height: 100,

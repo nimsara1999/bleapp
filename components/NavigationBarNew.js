@@ -9,7 +9,6 @@ import AntDesign from '@expo/vector-icons/AntDesign'
 const NavigationBar = () => {
   const navigation = useNavigation();
   const [modalVisible, setModalVisible] = useState(false);
-  const [modalVisibleAbout, setModalVisibleAbout] = useState(false);
 
   const handleSignOut = () => {
     auth
@@ -31,7 +30,7 @@ const NavigationBar = () => {
         <Ionicons name="person" size={24} color="white" />
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.userIcon} onPress={() => setModalVisibleAbout(true)}>
+      <TouchableOpacity style={styles.userIcon} onPress={() => setModalVisible(true)}>
         <Ionicons name="book" size={24} color="white"  />
       </TouchableOpacity>
 
@@ -47,30 +46,9 @@ const NavigationBar = () => {
             <View style={styles.centeredView}>
               <View style={styles.modalView}>
                 <TouchableOpacity onPress={handleSignOut} style={styles.buttonSignOut}>
-                  <Text style={styles.buttonText}>Signout</Text>
+                  <Text style={styles.buttonText}>Sign out</Text>
                 </TouchableOpacity>
                 <Text>Email: {auth.currentUser?.email}</Text>
-              </View>
-            </View>
-          </View>
-        </TouchableWithoutFeedback>
-      </Modal>
-
-      <Modal
-        transparent={true}
-        visible={modalVisibleAbout}
-        onRequestClose={() => {
-          setModalVisibleAbout(!modalVisibleAbout);
-        }}
-      >
-        <TouchableWithoutFeedback onPress={() => setModalVisibleAbout(false)}>
-          <View style={styles.modalBackground}>
-            <View style={styles.centeredView}>
-              <View style={styles.modalView}>
-                <Text>About</Text>
-                <Text>Version 1.0.0</Text>
-                <Text>Softnx Technologies, SriLanka</Text>
-                <Text>By Nimsara </Text>
               </View>
             </View>
           </View>
@@ -119,7 +97,7 @@ const styles = StyleSheet.create({
   buttonSignOut: {
     backgroundColor: 'red',
     width: '100%',
-    padding: 10,
+    padding: 15,
     borderRadius: 10,
     alignItems: 'center',
     marginBottom: 10,
